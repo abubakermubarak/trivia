@@ -48,7 +48,7 @@ class TriviaTestCase(unittest.TestCase):
         self.assertEqual(data["success"], True)
         self.assertTrue(len(data["categories"]))
 
-    def test_404_categories(self): 
+    def test_405_categories(self): 
         res = self.client().patch('/categories')
         data = json.loads(res.data)   
         self.assertEqual(res.status_code, 405)
@@ -66,7 +66,7 @@ class TriviaTestCase(unittest.TestCase):
         self.assertTrue(data["cateogries"])
 
     def test_404_sent_requesting_beyond_valid_page(self):
-        res = self.client().patch("/questions")
+        res = self.client().get("/questions")
         data = json.loads(res.data)
 
         self.assertEqual(res.status_code, 404)
