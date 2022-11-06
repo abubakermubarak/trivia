@@ -61,7 +61,7 @@ class TriviaTestCase(unittest.TestCase):
         data = json.loads(res.data)
         self.assertEqual(res.status_code, 200)
         self.assertEqual(data["success"], True)
-        self.assertTrue(data["total_questions"],19)
+        self.assertTrue(data["total_questions"])
         self.assertTrue(data["questions"])
         self.assertTrue(data["cateogries"])
 
@@ -69,9 +69,9 @@ class TriviaTestCase(unittest.TestCase):
         res = self.client().patch("/questions")
         data = json.loads(res.data)
 
-        self.assertEqual(res.status_code, 405)
+        self.assertEqual(res.status_code, 404)
         self.assertEqual(data["success"], False)
-        self.assertEqual(data["message"], "method not allowed")
+        self.assertEqual(data["message"], "Not found")
 
     def test_create_question(self):
         res = self.client().post("/questions", json=self.new_question)

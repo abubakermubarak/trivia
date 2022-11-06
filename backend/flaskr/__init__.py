@@ -81,30 +81,18 @@ def create_app(test_config=None):
     """
     @app.route('/questions', methods=['GET'])
     def retrieve_questions():
-        current_category  = []
-        categories_by_id = {}
-        try:
-            categories = Question.query.with_entities(Question.category).all()
-            for category in categories :
-                for cate in category:
-                    current_category.append(cate)
-           
-            questions =  Question.query.order_by(Question.category).all()
-            formatted_questions = paginate_questions(request, questions)
-            cat = Category.query.order_by(Category.id).all()
-            for c in cat:
-                categories_by_id[c.id] = c.type
-            return jsonify(
-                {
-                    "cateogries": categories_by_id,
-                    "current_category": current_category,
-                    "questions": formatted_questions,
-                    "total_questions": len(questions),
-                    "success":True,
-                }
-            )
-        except:
-            abort(405)   
+        selection = Question.query.order_by(Question.id).all()
+        current_question  = paginate_questions(request, selection)
+        categories = Category.query.all()
+        if len(current_question) == 0:
+            abort(404)
+        return jsonify({
+            'success': True,
+            'questions': current_question,
+            'total_questions' : len(Question.query.all()),
+            'categories': {category.id: category.type for category in categories}
+        })    
+  
 
     """
     @DONE:
