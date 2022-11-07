@@ -15,7 +15,7 @@ def paginate_questions(request, selection):
     start = (page - 1) * QUESTIONS_PER_PAGE
     end = start + QUESTIONS_PER_PAGE
 
-    questions = [book.format() for book in selection]
+    questions = [question.format() for question in selection]
     current_questions = questions[start:end]
 
     return current_questions
@@ -55,7 +55,8 @@ def create_app(test_config=None):
         try:
             choice = Category.query.order_by(Category.id).all()
             for category in choice:
-                categories[category.id] = category.type                     
+                categories[category.id] = category.type 
+
             return jsonify(
                 {
                     'success': True,
@@ -81,6 +82,7 @@ def create_app(test_config=None):
     """
     @app.route('/questions', methods=['GET'])
     def retrieve_questions():
+        
         selection = Question.query.order_by(Question.id).all()
         current_question  = paginate_questions(request, selection)
         categories = Category.query.all()
@@ -92,7 +94,6 @@ def create_app(test_config=None):
             'total_questions' : len(Question.query.all()),
             'categories': {category.id: category.type for category in categories}
         })    
-  
 
     """
     @DONE:
@@ -107,7 +108,7 @@ def create_app(test_config=None):
             question = Question.query.filter(
                 Question.id == question_id).one_or_none()
             if question is None:
-                abort(404)
+                 abort(404)
             question.delete()
             return jsonify(
                 {
@@ -142,13 +143,15 @@ def create_app(test_config=None):
                 category=new_category,
                 difficulty=new_difficulty)
             question.insert()
+            if not(question.question and question.answer and question.category and question.difficulty):
+                abort(422)
             return jsonify(
                 {
                     "success": True,
                 }
             )
         except BaseException:
-            abort(405)
+            abort(422)
 
     """
     @DONE:
@@ -161,26 +164,31 @@ def create_app(test_config=None):
     Try using the word "title" to start.
     """
     @app.route('/questions/search', methods=['POST'])
-    def search_question():
+    def search_questions():
         body = request.get_json()
-        search_term = body("searchTerm", None)
+        search_term = body.get('searchTerm', None)
+        current_category = []
         try:
-            search_query = Question.query.filter(
-                Question.question.ilike(
-                    "%{}%".format(
-                        search_term))).all()
+            search = '%{}%'.format(search_term)
+            selection = Question.query.order_by(Question.category).filter(Question.question.ilike(search)).all()
+            questions = paginate_questions(request, selection)
 
-            question = paginate_questions(request, search_query)
-            return jsonify(
-                {
-                    "question": question,
-                    "success": True
-                }
-            )
-        except BaseException:
+            categories = Question.query.with_entities(Question.category).order_by(Question.category).filter(Question.question.ilike(search)).all()
+            for category in categories:
+                for innerlist in category:
+                    current_category.append(innerlist)
+            if len(selection) == 0:
+                abort(404)
+            return jsonify({
+              'success': True,
+              'questions': questions,
+              'current_category': current_category,
+            'total_questions': len(selection)
+            })
+        except:
             abort(404)
     
-
+    
     """
     @DONE:
     Create a GET endpoint to get questions based on category.
@@ -191,10 +199,12 @@ def create_app(test_config=None):
     """
     @app.route("/categories/<int:id>/questions", methods=['GET'])
     def question_by_categeory(id):
+        if int(id) < 0 or int(id) > 6 :
+                abort(404)
         try:
             question = Question.query.order_by(Question.id).filter(Question.category == id).all() 
             formatted_question = paginate_questions(request,question)
-            print(formatted_question)
+            
             return jsonify(
                 {
                     "questions": formatted_question,
@@ -205,7 +215,7 @@ def create_app(test_config=None):
                 }
             )
         except BaseException:
-            abort(405)
+            abort(404)
 
     """
     @DONE:
@@ -227,26 +237,31 @@ def create_app(test_config=None):
     @app.route("/quizzes", methods=['POST'])
     def get_question():
         body = request.get_json()
-        previous_question = body.get("previous_questions", None)
-        quiz_category = body.get("quiz_category", None)
+        if not ('quiz_category' in body and 'previous_questions' in body):
+            abort(422)
+        previous_question = body.get("previous_questions")
+        quiz_category = body.get("quiz_category")
         try:
-            if quiz_category['id'] == 0 :
-                question  = Question.query.all()
-            else :    
-                questions = Question.query.order_by(
-                Question.id).filter(
-                Question.category == int(
-                    quiz_category['id']))
-
-            selection = [question.format(
-            ) for question in questions if question.id not in previous_question]
+            
+            if quiz_category['type'] == 'click':
+                questions = Question.query.filter(Question.id.notin_((previous_question))).all() 
+            else:
+                questions = Question.query.filter_by(category=quiz_category['id']).filter(Question.id.notin_((previous_question))).all()
+            
+            selection = questions[random.randrange(
+                0, len(questions))].format() if len(questions) > 0 else None
 
             return jsonify({
-                "success": True,
-                "question": random.choice(selection)
+                'success':True,
+                'question': selection
             })
-        except BaseException:
-            abort(400)
+        except:
+            abort(422)    
+
+
+
+            
+
   
 
     @app.errorhandler(404)
